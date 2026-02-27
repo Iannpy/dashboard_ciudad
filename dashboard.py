@@ -31,9 +31,9 @@ def distribuir(total, n):
     resto = total % n
     return [base + 1 if i < resto else base for i in range(n)]
 
-df["agencias_conectadas"] = distribuir(69, n)
-df["agencias_nacionales"] = distribuir(63, n)
-df["agencias_internacionales"] = distribuir(4, n)
+df["agencias_conectadas"] = distribuir(78, n)
+df["agencias_nacionales"] = distribuir(66, n)
+df["agencias_internacionales"] = distribuir(7, n)
 df["organismos_internacionales"] = distribuir(4, n)
 
 df["total_visitantes"] = (
