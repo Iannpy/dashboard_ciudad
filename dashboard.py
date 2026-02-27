@@ -48,7 +48,7 @@ df["total_visitantes"] = (
 # -----------------------------
 st.image("assets/AB2026_ANATO_LETRERO_3,80x0,70mts.svg", width=720)
 st.divider()
-st.title("📊 Dashboard de Visitantes – ANATO Vive BAQ")
+st.title("📊 Dashboard de Visitantes – ANATO 2026")
 
 # -----------------------------
 # KPIs
