@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 
 st.set_page_config(
     page_title="Dashboard ANATO VIVE BAQ",
-    layout="wide"
+    layout="wide",
+    theme="light"
 )
 
 # -----------------------------
