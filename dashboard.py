@@ -1,101 +1,95 @@
 import streamlit as st
 import pandas as pd
-import requests
-from streamlit_autorefresh import st_autorefresh
+from datetime import datetime, timedelta
+
 
 st.set_page_config(
-    page_title="Dashboard QR",
+    page_title="Dashboard ANATO VIVE BAQ",
     layout="wide"
 )
 
+# -----------------------------
+# DATA
+# -----------------------------
+hoy = datetime.now().date()
+fechas = [hoy - timedelta(days=2), hoy - timedelta(days=1), hoy]
+horas = list(range(8, 18))
 
-st_autorefresh(interval=10000, key="qr_refresh")
+rows = []
+for fecha in fechas:
+    for hora in horas:
+        rows.append({
+            "fecha": fecha,
+            "hora": f"{hora:02d}:00"
+        })
 
-API_BASE = "https://qr-production-73d6.up.railway.app"
+df = pd.DataFrame(rows)
+n = len(df)
 
-st.title("📊 Dashboard de Escaneos QR")
-lista_qrs = ["ANATO_BAQ", "WSP_DIXY"]
-slug = st.selectbox("Slug del QR", options=lista_qrs)
+def distribuir(total, n):
+    base = total // n
+    resto = total % n
+    return [base + 1 if i < resto else base for i in range(n)]
 
-if slug:
-    url = f"{API_BASE}/stats/{slug}"
+df["agencias_conectadas"] = distribuir(69, n)
+df["agencias_nacionales"] = distribuir(63, n)
+df["agencias_internacionales"] = distribuir(4, n)
+df["organismos_internacionales"] = distribuir(4, n)
+
+df["total_visitantes"] = (
+    df["agencias_conectadas"]
+    + df["agencias_nacionales"]
+    + df["agencias_internacionales"]
+    + df["organismos_internacionales"]
+)
+
+# -----------------------------
+# HEADER
+# -----------------------------
+st.image("assets/AB2026_ANATO_LETRERO_3,80x0,70mts.svg", width=720)
+st.divider()
+st.title("📊 Dashboard de Visitantes – ANATO Vive BAQ")
+
+# -----------------------------
+# KPIs
+# -----------------------------
+col1, col2, col3, col4 = st.columns(4)
+
+col1.metric("👥 Total visitantes", int(df["total_visitantes"].sum()))
+col2.metric("🏢 Agencias conectadas", int(df["agencias_conectadas"].sum()))
+col3.metric("🇨🇴 Agencias nacionales", int(df["agencias_nacionales"].sum()))
+col4.metric("🌍 Agencias internacionales", int(df["agencias_internacionales"].sum()))
+
+st.divider()
+
+# -----------------------------
+# VISITANTES POR HORA (TOTAL)
+# -----------------------------
+st.subheader("⏰ Visitantes por hora (total)")
+
+visitas_hora = df.groupby("hora")["total_visitantes"].sum().reset_index()
+
+st.line_chart(
+    visitas_hora,
+    x="hora",
+    y="total_visitantes",
+    use_container_width=True
+)
+
+# -----------------------------
+# COMPARACIÓN POR DÍA
+# -----------------------------
+st.subheader("📅 Visitantes por día")
+
+visitas_dia = df.groupby("fecha")["total_visitantes"].sum().reset_index()
+
+st.bar_chart(
+    visitas_dia,
+    x="fecha",
+    y="total_visitantes",
+    use_container_width=True
+)
+
+
+    #diagrama de torta+
     
-    try:
-        r = requests.get(url)
-        r.raise_for_status()
-    except:
-        st.error("No se pudo conectar con la API.")
-        st.stop()
-
-    data = r.json()
-    df = pd.DataFrame(data["clicks"])
-
-    if df.empty:
-        st.warning("Aún no hay escaneos.")
-        st.stop()
-
-    # Convertir a datetime
-    df["fecha"] = pd.to_datetime(df["fecha"], utc=True)
-
-    # Convertir de UTC a hora de Bogotá
-    df["fecha"] = df["fecha"].dt.tz_convert("America/Bogota")
-
-    # Extraer hora ya convertida
-    df["hora"] = df["fecha"].dt.hour
-    # Extraer dia    
-    df["dia"] = df["fecha"].dt.day
-    dias = {
-    "Monday": "Lunes",
-    "Tuesday": "Martes",
-    "Wednesday": "Miércoles",
-    "Thursday": "Jueves",
-    "Friday": "Viernes",
-    "Saturday": "Sábado",
-    "Sunday": "Domingo"
-    }
-    # Extraer dia de la semana    df["dia_semana"] = df["fecha"].dt.day_name()
-    df["dia_semana"] = df["fecha"].dt.day_name().map(dias)
-    
-    
-
-    def detectar_dispositivo(ua):
-        if "Android" in ua:
-            return "Android"
-        elif "iPhone" in ua:
-            return "iPhone"
-        else:
-            return "Otro"
-
-    df["dispositivo"] = df["navegador"].apply(detectar_dispositivo)
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    col1.metric("Total escaneos", len(df))
-    col2.metric("Hora pico", df["hora"].mode()[0])
-    col3.metric("Día pico", df["dia_semana"].mode()[0])
-    col4.metric("Último escaneo", df["fecha"].max().strftime("%H:%M"))
-
-    st.divider()
-    st.subheader("Escaneos por hora")
- 
-    dias_semana=df["dia_semana"].unique()
-    dias_selected = st.selectbox("Selecciona los días de la semana", options=dias_semana)
-    
-    df_filtrado = df[df["dia_semana"].isin([dias_selected])]
-    st.line_chart(df_filtrado["hora"].value_counts().sort_index(),
-                    x_label="Hora del día", y_label="Número de escaneos",
-                    use_container_width=True
-                    )
-    
-    st.divider()
-    st.subheader("Escaneos por día de la semana")
-    dias_semana_counts = df["dia_semana"].value_counts().reindex(["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"])
-    st.bar_chart(dias_semana_counts, x_label="Día de la semana", y_label="Número de escaneos", use_container_width=True)
-    st.divider()
-    
-
-    st.subheader("Últimos escaneos")
-    st.dataframe(
-        df.sort_values("fecha", ascending=False)[["fecha", "dispositivo"]],
-        use_container_width=True
-    )
