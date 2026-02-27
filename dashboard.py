@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 
 st.set_page_config(
-    page_title="Dashboard ANATO VIVE BAQ",
+    page_title="Dashboard ANATO 2026",
     layout="wide",
 )
 
